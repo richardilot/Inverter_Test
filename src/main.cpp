@@ -21,6 +21,8 @@ volatile int state = 0;
 int newdata = 0;
 int j = 0;
 
+uint sortOfInterrupt = 0;
+
 //==========TRANSLATED DATA=======//
 // 0x405
 uint8_t BMS_State = 0;
@@ -31,23 +33,39 @@ uint8_t Relays[8] = {0}; // index 0 = discharge, 1 = charge plus, 2 = charge gnd
 // 0x402
 uint32_t IVT_Current = 0;
 
+uint32_t tempIVTCurrent = 0;
+
 // 0x403
 uint32_t LoadPlus_Voltage = 0;
 uint32_t IVT_Temp = 0;
 
+uint32_t tempLPVolt = 0;
+uint32_t tempIVTTemp = 0;
+
 // 0x404
 uint32_t Batt_Voltage = 0;
 uint32_t IVT_Power = 0;
+
+uint32_t tempBVolt = 0;
+uint32_t tempIVTPower = 0;
 
 // 0x400
 uint32_t Cell_Volt_Min = 0;
 uint32_t Cell_Volt_Avg = 0;
 uint32_t Cell_Volt_Max = 0;
 
+uint32_t tempVMin = 0;
+uint32_t tempVAvg = 0;
+uint32_t tempVMax = 0;
+
 // 0x401
 uint32_t Cell_Temp_Min = 0;
 uint32_t Cell_Temp_Avg = 0;
 uint32_t Cell_Temp_Max = 0;
+
+uint32_t tempTMin = 0;
+uint32_t tempTAvg = 0;
+uint32_t tempTMax = 0;
 
 uint64_t packet201 = 0;
 
@@ -63,76 +81,88 @@ void TranslatedData()
   Serial.print("DATA:  \t");
 
   // Print readable BMS State
-  Serial.print("BMS Data\t");
+  Serial.print("BMS Data");
 
-  Serial.print("Battery Modules\n");
-  Serial.print("\t\tCell Volt Min: ");
-  if (Cell_Volt_Min > 5000 && Cell_Volt_Min < 500)
+  Serial.print(" Battery Modules\n");
+  Serial.print("\t\t Cell Volt Min: ");
+  if (Cell_Volt_Min > 5000 || Cell_Volt_Min < 500)
   {
-    Serial.print("N/A");
+    Serial.print((float)tempVMin / 1000.0);
+    Serial.print(" V");
   }
   else
   {
     Serial.print((float)Cell_Volt_Min / 1000.0);
     Serial.print(" V");
+    tempVMin = Cell_Volt_Min;
   }
 
-  Serial.print("\tCell Volt Avg: ");
-  if (Cell_Volt_Avg > 4000 && Cell_Volt_Avg < 1000)
+  Serial.print("\t\t\tCell Volt Avg: ");
+  if (Cell_Volt_Avg > 4000 || Cell_Volt_Avg < 1000)
   {
-    Serial.print("N/A");
+    Serial.print((float)tempVAvg / 1000.0);
+    Serial.print(" V");
   }
   else
   {
     Serial.print((float)Cell_Volt_Avg / 1000.0);
     Serial.print(" V");
+    tempVAvg = Cell_Volt_Avg;
   }
 
-  Serial.print("\tCell Volt Max: ");
-  if (Cell_Volt_Max > 4000 && Cell_Volt_Max < 1000)
+  Serial.print("\t\t\tCell Volt Max: ");
+  if (Cell_Volt_Max > 4000 || Cell_Volt_Max < 1000)
   {
-    Serial.print("N/A");
+    Serial.print((float)tempVMax / 1000.0);
+    Serial.println(" V");
   }
   else
   {
     Serial.print((float)Cell_Volt_Max / 1000.0);
-    Serial.print(" V");
+    Serial.println(" V");
+    tempVMax = Cell_Volt_Max;
   }
 
-  Serial.print("\t\tCell Temp Min: ");
-  if (Cell_Temp_Min > 600 && Cell_Temp_Min < 10)
+  Serial.print("\t\t Cell Temp Min: ");
+  if (Cell_Temp_Min > 600 || Cell_Temp_Min < 100)
   {
-    Serial.print("N/A");
+    Serial.print((float)tempTMin / 10.0);
+    Serial.print(" degC");
   }
   else
   {
     Serial.print((float)Cell_Temp_Min / 10.0);
     Serial.print(" degC");
+    tempTMin = Cell_Temp_Min;
   }
 
-  Serial.print("\tCell Temp Avg: ");
-  if (Cell_Temp_Avg > 600 && Cell_Temp_Avg < 10)
+  Serial.print("\t\tCell Temp Avg: ");
+  if (Cell_Temp_Avg > 600 || Cell_Temp_Avg < 100)
   {
-    Serial.print("N/A");
+    Serial.print((float)tempTAvg / 10.0);
+    Serial.print(" degC");
   }
   else
   {
     Serial.print((float)Cell_Temp_Avg / 10.0);
     Serial.print(" degC");
+    tempTAvg = Cell_Temp_Avg;
   }
 
-  Serial.print("\tCell Temp Max: ");
-  if (Cell_Temp_Max > 600 && Cell_Temp_Max < 10)
+  Serial.print("\t\tCell Temp Max: ");
+  if (Cell_Temp_Max > 600 || Cell_Temp_Max < 100)
   {
-    Serial.print("N/A");
+    Serial.print((float)tempTMax / 10.0);
+    Serial.println(" degC");
   }
   else
   {
     Serial.print(Cell_Temp_Max / 10.0);
-    Serial.print(" degC");
+    Serial.println(" degC");
+    tempTMax = Cell_Temp_Max;
   }
 
-  Serial.print("\t\tBMS State: ");
+  Serial.print("\t\t BMS State: ");
   if (BMS_State == 0)
   {
     Serial.print("BMS_INIT");
@@ -163,7 +193,7 @@ void TranslatedData()
   }
 
   // Print readable IMD State
-  Serial.print("\tIMD State: ");
+  Serial.print("\t\t IMD State: ");
   if (IMD_State == 0)
   {
     Serial.println("NOT OK");
@@ -175,53 +205,61 @@ void TranslatedData()
 
   // Print readable Load+ Voltage
   Serial.print("\tIVT Data\n");
-  Serial.print("\t\tLoad+ Voltage: ");
+  Serial.print("\t\t Load+ Voltage: ");
   if (LoadPlus_Voltage > 300000)
   {
-    Serial.print("N/A");
+    Serial.print((float)tempLPVolt / 1000.0);
+    Serial.print(" V");
   }
   else
   {
     Serial.print((float)LoadPlus_Voltage / 1000.0);
     Serial.print(" V");
+    tempLPVolt = LoadPlus_Voltage;
   }
 
   // Print readable Batt+ Voltage
-  Serial.print("\tInput Voltage: ");
+  Serial.print("\t\tInput Voltage: ");
   if (Batt_Voltage > 300000)
   {
-    Serial.print("N/A");
+    Serial.print((float)tempBVolt / 1000.0);
+    Serial.print(" V");
   }
   else
   {
     Serial.print((float)Batt_Voltage / 1000.0);
     Serial.print(" V");
+    tempBVolt = Batt_Voltage;
   }
 
-  Serial.print("\tIVT Current: ");
+  Serial.print("\t\tIVT Current: ");
   if (IVT_Current > 20000)
   {
-    Serial.print("N/A");
+    Serial.print((float)tempIVTCurrent / 1000.0);
+    Serial.print(" A");
   }
   else
   {
     Serial.print((float)IVT_Current / 1000.0);
     Serial.print(" A");
+    tempIVTCurrent = IVT_Current;
   }
 
-  Serial.print("\tIVT Temperature: ");
-  if (IVT_Temp > 500 && IVT_Temp < 10)
+  Serial.print("\t\tIVT Temperature: ");
+  if (IVT_Temp > 500 || IVT_Temp < 100)
   {
-    Serial.print("N/A");
+    Serial.print((float)tempIVTTemp / 10.0);
+    Serial.println(" degC");
   }
   else
   {
     Serial.print((float)IVT_Temp / 10.0);
     Serial.println(" degC");
+    tempIVTTemp = IVT_Temp;
   }
   // Print readable HV Relays
-  Serial.print("\t\tRelays State  ");
-  Serial.print("  HV-: ");
+  Serial.print("\tRelays State  \n");
+  Serial.print("\t\t HV-: ");
   Serial.print(Relays[5]);
   Serial.print("  Precharge: ");
   Serial.print(Relays[4]);
@@ -340,6 +378,7 @@ void canSniff0(const CAN_message_t &msg)
     }
     }
   }
+  TranslatedData();
 }
 
 //------------- NOT USED ----------------//
@@ -412,8 +451,11 @@ void loop()
       state = substate;
     }
   }
+
   FTCan.events();
-  delay(10); // TODO: if data not good, delete this.
+  delay(10);
+
+
 
   Can1.events();
 
@@ -421,8 +463,14 @@ void loop()
 
   if (newdata != 0)
   {
-    SendData(1, packet201, 0x100);
-    delay(10);
+    if(sortOfInterrupt == 0){
+      SendData(1, packet201, 0x100);
+      delay(5);
+      sortOfInterrupt = 100;
+    }else{
+      sortOfInterrupt--;
+    }
+
     if (j < 10000)
     {
       newdata = 1;
